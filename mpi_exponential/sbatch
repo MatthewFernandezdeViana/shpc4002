@@ -1,0 +1,21 @@
+#!/bin/bash --login
+#SBATCH --nodes=2
+#SBATCH --time=00:10:00
+#SBATCH --account=director2069
+#SBATCH --export=NONE
+#SBATCH --mail-user=21498942@student.uwa.edu.au
+# mail-type=ALL
+#SBATCH --partition=debugq
+
+# To launch the job, we specify to srun 48 MPI tasks (-n 48)
+# with 24 MPI tasks per node
+#
+# Note we avoid any inadvertent OpenMP threading by setting
+# OMP_NUM_THREADS=1
+module swap PrgEnv-cray PrgEnv-gnu
+export OMP_NUM_THREADS=12
+ 
+# --export=all is recommended to export the current environment
+# variables into the batch job environment
+  
+srun --export=all -N 2 -n 2 -c 12  --cpu_bind=sockets ./graphsimilarity_mpi -s 7 -q 1 -c -t -v -o
