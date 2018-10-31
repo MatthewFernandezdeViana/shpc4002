@@ -13,7 +13,7 @@
 
 int main(int argc, char *argv[])
 {
-    int N = 10000000, NNZ = 15000000, order_approx = 10;
+    int N = 100000, NNZ = 150000, order_approx = 10;
 
     MPI_Init(&argc, &argv);
 
@@ -32,15 +32,21 @@ int main(int argc, char *argv[])
     double complex *vector, *matrix;
     min = -1;
     max = 1;
+    
+    column_index = calloc(NNZ, sizeof(int));
+    row_pointer = calloc(N + 1, sizeof(int));
+    matrix = calloc(NNZ, sizeof(double complex));
+    vector = calloc(N, sizeof(double complex));
+    
+    printf("not cooking yet\n");
 
     if (loc_id == 0) {
-        column_index = calloc(NNZ, sizeof(int));
-        row_pointer = calloc(N + 1, sizeof(int));
-        matrix = calloc(NNZ, sizeof(double complex));
-        vector = calloc(N, sizeof(double complex));
+        
 
         generate_matrix(row_pointer, column_index, N, NNZ, matrix, min, max);
         cplxd_array_gen(vector, N, min, max);
+        
+        printf("here we are friend\n");
 
 
 
@@ -50,6 +56,8 @@ int main(int argc, char *argv[])
         f_vector = fopen("vector.txt", "w");
         f_result = fopen("result.txt", "w");
         f_time = fopen("time_omp.txt", "a");
+        
+        printf("Files opened\n");
 
         for (i = 0; i < NNZ; i++) {
             fprintf(f_matrix, "%f + i%f\n", creal(matrix[i]), cimag(matrix[i]));
@@ -70,6 +78,7 @@ int main(int argc, char *argv[])
         fclose(f_column_index);
         fclose(f_vector);
         fclose(f_row_pointer);
+        printf("matrix written\n");
     }
 
     clock_t begin = clock();
@@ -83,14 +92,17 @@ int main(int argc, char *argv[])
 
     clock_t end = clock();
 
-    double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-    fprintf(f_time, "%f\n", time_spent);
+    if (loc_id == 0) {
 
-    for (i = 0; i < N; i++) {
-        fprintf(f_result, "%f + i%f\n", creal(vector[i]), cimag(vector[i]));
+        double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+        fprintf(f_time, "%f\n", time_spent);
+
+        for (i = 0; i < N; i++) {
+            fprintf(f_result, "%f + i%f\n", creal(vector[i]), cimag(vector[i]));
+        }
+
+        fclose(f_result);
     }
-
-    fclose(f_result);
 
 
     free(vector);

@@ -2,7 +2,7 @@
 CC = mpicc
 
 # Compiler flags:
-CFLAGS = -std=c11 -O0 -fopenmp -Wall -g
+CFLAGS = -std=c11 -O3 -fopenmp -Wall -g
 LINKERS = -lm
 
 TARGET = shpc2

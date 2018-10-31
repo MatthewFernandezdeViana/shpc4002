@@ -187,7 +187,7 @@ void distribute_mat(double complex *values,
                     int loc_num_rows
                    )
 {
-    int i, j, nnz_each_proc[num_procs],  loc_num_rows2 = 0, *loc_nnz;
+    int i, j, *nnz_each_proc, *displacement,  loc_num_rows2 = 0, loc_nnz;
      //Changeall
 
     loc_num_rows = 0;
@@ -200,37 +200,54 @@ void distribute_mat(double complex *values,
     }
 
     loc_row_ptr = malloc(sizeof(int) * (loc_num_rows + 1));
+    nnz_each_proc = malloc(sizeof(int) * (num_procs));
+    displacement = malloc(sizeof(int) * (num_procs));
     
-    int displacement[num_procs];
+    printf("start of mpi %d \n", num_procs);
+    
 
     if (loc_id == 0) {
-        
+        printf("built nnz\n"); //its fucking up here idk why
         for (i = 0; i < num_procs - 1; i++) {
+            printf("built nnz 2\n");
 
             nnz_each_proc[i] = rPtr[i * loc_num_rows] - rPtr[(i + 1) * loc_num_rows];
             displacement[i] = nnz_each_proc[i];//creates an array of number entries per proc
+            MPI_Send(&nnz_each_proc[i], 1, MPI_INT, i, 31, MPI_COMM_WORLD);            
+           
         }
+        printf("built nnz 3\n");
         nnz_each_proc[i] = rPtr[i * loc_num_rows2] - rPtr[(i + 1) * loc_num_rows2];
+        MPI_Send(&nnz_each_proc[i], 1, MPI_INT, i, 31, MPI_COMM_WORLD);
 
         displacement[0] = 0;
 
         for (i = 1; i < num_procs; i++) {
 
             displacement[i] = displacement[i - 1] + nnz_each_proc[i];//creates an array of number entries per proc
+            printf("built nnz 4\n");
         }
     }
-    
-    loc_nnz = calloc(1, sizeof(int));
+    if (loc_id != 0) {
+        MPI_Recv(&loc_nnz, 1, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-    MPI_Scatter(nnz_each_proc, 1, MPI_INT, loc_nnz, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        
+    }
+    // loc_nnz = calloc(1, sizeof(int));
+    
+    printf("ready to scatter\n");
+
     MPI_Scatter(rPtr, loc_num_rows, MPI_INT, loc_row_ptr, loc_num_rows, MPI_INT, 0, MPI_COMM_WORLD);
 
-    loc_values = calloc((loc_nnz[0]), sizeof(double complex));
-    loc_col_index = calloc((loc_nnz[0]), sizeof(int));
+    loc_values = calloc((loc_nnz), sizeof(double complex));
+    loc_col_index = calloc((loc_nnz), sizeof(int));
 
-    MPI_Scatterv(values, nnz_each_proc, displacement, MPI_DOUBLE_COMPLEX, loc_values, loc_nnz[0], MPI_DOUBLE_COMPLEX, 0, MPI_COMM_WORLD);
-    MPI_Scatterv(colindex, nnz_each_proc, displacement, MPI_INT, loc_col_index, loc_nnz[0], MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Scatterv(values, nnz_each_proc, displacement, MPI_DOUBLE_COMPLEX, loc_values, loc_nnz, MPI_DOUBLE_COMPLEX, 0, MPI_COMM_WORLD);
+    MPI_Scatterv(colindex, nnz_each_proc, displacement, MPI_INT, loc_col_index, loc_nnz, MPI_INT, 0, MPI_COMM_WORLD);
     
+    free(loc_row_ptr);
+    free(nnz_each_proc);
+    free(displacement);
     free(values);
     free(colindex);
     free(rPtr);
@@ -351,6 +368,7 @@ void mpi_spmv_multiply(int myid,
 {
     int i, j, count;
     count = 0;
+    printf("we're cooking with gas");
     #pragma omp parallel for
     for (i = 0; i < nrows; i++) {
         res[i] = 0.0;
