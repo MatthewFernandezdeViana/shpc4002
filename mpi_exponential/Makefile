@@ -1,5 +1,5 @@
 # The compiler: gcc in this case, will change when moving to MPI
-CC = mpicc
+CC = cc
 
 # Compiler flags:
 CFLAGS = -std=c11 -O3 -fopenmp -Wall -g
