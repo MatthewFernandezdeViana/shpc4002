@@ -188,7 +188,7 @@ void distribute_mat(double complex *values,
                    )
 {
     int i, j, *nnz_each_proc, *displacement,  loc_num_rows2 = 0, loc_nnz;
-     //Changeall
+    //Changeall
 
     loc_num_rows = 0;
 
@@ -202,9 +202,9 @@ void distribute_mat(double complex *values,
     loc_row_ptr = malloc(sizeof(int) * (loc_num_rows + 1));
     nnz_each_proc = malloc(sizeof(int) * (num_procs));
     displacement = malloc(sizeof(int) * (num_procs));
-    
+
     printf("start of mpi %d \n", num_procs);
-    
+
 
     if (loc_id == 0) {
         printf("built nnz\n"); //its fucking up here idk why
@@ -213,8 +213,8 @@ void distribute_mat(double complex *values,
 
             nnz_each_proc[i] = rPtr[i * loc_num_rows] - rPtr[(i + 1) * loc_num_rows];
             displacement[i] = nnz_each_proc[i];//creates an array of number entries per proc
-            MPI_Send(&nnz_each_proc[i], 1, MPI_INT, i, 31, MPI_COMM_WORLD);            
-           
+            MPI_Send(&nnz_each_proc[i], 1, MPI_INT, i, 31, MPI_COMM_WORLD);
+
         }
         printf("built nnz 3\n");
         nnz_each_proc[i] = rPtr[i * loc_num_rows2] - rPtr[(i + 1) * loc_num_rows2];
@@ -231,10 +231,10 @@ void distribute_mat(double complex *values,
     if (loc_id != 0) {
         MPI_Recv(&loc_nnz, 1, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-        
+
     }
     // loc_nnz = calloc(1, sizeof(int));
-    
+
     printf("ready to scatter\n");
 
     MPI_Scatter(rPtr, loc_num_rows, MPI_INT, loc_row_ptr, loc_num_rows, MPI_INT, 0, MPI_COMM_WORLD);
@@ -244,7 +244,7 @@ void distribute_mat(double complex *values,
 
     MPI_Scatterv(values, nnz_each_proc, displacement, MPI_DOUBLE_COMPLEX, loc_values, loc_nnz, MPI_DOUBLE_COMPLEX, 0, MPI_COMM_WORLD);
     MPI_Scatterv(colindex, nnz_each_proc, displacement, MPI_INT, loc_col_index, loc_nnz, MPI_INT, 0, MPI_COMM_WORLD);
-    
+
     free(loc_row_ptr);
     free(nnz_each_proc);
     free(displacement);
@@ -506,7 +506,7 @@ void taylor_series(const double complex *val1,
                    const int nth,
                    const int loc_id,
                    const int loc_num_rows
-                   )
+                  )
 {
 
     double complex *vector_next, local_vect;
@@ -515,7 +515,7 @@ void taylor_series(const double complex *val1,
 
 
 
-    
+
 
     vector_next = calloc(N, sizeof(double complex));
 
@@ -525,13 +525,27 @@ void taylor_series(const double complex *val1,
         vector_next[j] = vector[j];
     }
 
+    if (loc_id == 0) {
+        t2 = MPI_Wtime();
+    }
+
 
     for (i = 1; i < nth + 1; i++) {
         //printf("%d\n", i);
 
+        if (loc_id == 0) {
+            t3 = MPI_Wtime();
+        }
+
+        
         mpi_spmv_multiply(loc_id, val1, rPtr1, col1, loc_num_rows, vector, vector_next);
 
-        MPI_Gather(MPI_IN_PLACE, N, MPI_DOUBLE_COMPLEX, vector_next, N, MPI_DOUBLE_COMPLEX, 0, MPI_COMM_WORLD);
+        if (loc_id == 0) {
+            t3 = MPI_Wtime() - t3;
+            printf("the time for the %d th mv is %d", i, (t3 * MPI_Wtick());
+        }
+
+        MPI_Reduce(MPI_IN_PLACE, vector_next, N, MPI_DOUBLE_COMPLEX, MPI_SUM, 0, MPI_COMM_WORLD); //reduce vector
 
         if (loc_id == 0) {
             fact = factorial(i);
@@ -542,8 +556,8 @@ void taylor_series(const double complex *val1,
         }
         MPI_Bcast(vector, MPI_DOUBLE_COMPLEX, N, 0, MPI_COMM_WORLD);
 
-    }
-    free(vector_next);
 
-}
+        free(vector_next);
+
+    }
 

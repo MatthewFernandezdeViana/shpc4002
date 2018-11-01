@@ -18,4 +18,4 @@ export OMP_NUM_THREADS=12
 # --export=all is recommended to export the current environment
 # variables into the batch job environment
   
-srun --export=all -N 2 -n 2 -c 12  --cpu_bind=sockets ./graphsimilarity_mpi -s 7 -q 1 -c -t -v -o
+srun --export=all -N 2 -n 2 -c 12  --cpu_bind=sockets ./shpc4002 -s 7 -q 1 -c -t -v -o
